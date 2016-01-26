@@ -24,6 +24,10 @@ import re
 # you may use urllib to encode data appropriately
 import urllib
 
+REQUEST_GET = "GET / HTTP/1.0\n\n"
+REQUEST_PUT = "PUT / HTTP/1.0\n\n"
+DEFAULT_PORT = 80
+
 def help():
     print "httpclient.py [GET/POST] [URL]\n"
 
@@ -36,17 +40,18 @@ class HTTPClient(object):
     #def get_host_port(self,url):
 
     def connect(self, host, port):
-        # use sockets!
-        return None
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        clientSocket.connect((host, port))
+        return clientSocket
 
     def get_code(self, data):
-        return None
+        return data
 
     def get_headers(self,data):
-        return None
+        return data
 
     def get_body(self, data):
-        return None
+        return data
 
     # read everything from the socket
     def recvall(self, sock):
@@ -61,8 +66,14 @@ class HTTPClient(object):
         return str(buffer)
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        request = "GET / HTTP/1.0\n\n"
+        socket = self.connect(url, DEFAULT_PORT)
+        socket.sendall(REQUEST_GET)
+
+        response = self.recvall(socket)
+
+        code = 200
+        body = self.get_body(response)
         return HTTPRequest(code, body)
 
     def POST(self, url, args=None):
@@ -71,11 +82,14 @@ class HTTPClient(object):
         return HTTPRequest(code, body)
 
     def command(self, url, command="GET", args=None):
+        print "URL: ", url
+        print "COMMAND: ", command
         if (command == "POST"):
             return self.POST( url, args )
         else:
             return self.GET( url, args )
     
+# fuck this bullshit hipster loosely typed sad excuse for a language
 if __name__ == "__main__":
     client = HTTPClient()
     command = "GET"
@@ -83,6 +97,9 @@ if __name__ == "__main__":
         help()
         sys.exit(1)
     elif (len(sys.argv) == 3):
-        print client.command( sys.argv[1], sys.argv[2] )
+        print "1: ", sys.argv[1], "2: ", sys.argv[2]
+        print client.command(sys.argv[1], "GET", None)
+        #print client.command( sys.argv[1], sys.argv[2] )
     else:
+        print "1: ", sys.argv[1]
         print client.command( command, sys.argv[1] )    
