@@ -31,7 +31,7 @@ DEFAULT_PORT = 80
 def help():
     print "httpclient.py [GET/POST] [URL]\n"
 
-class HTTPRequest(object):
+class HTTPResponse(object):
     def __init__(self, code=200, body=""):
         self.code = code
         self.body = body
@@ -66,6 +66,7 @@ class HTTPClient(object):
         return str(buffer)
 
     def GET(self, url, args=None):
+
         request = "GET / HTTP/1.0\n\n"
         socket = self.connect(url, DEFAULT_PORT)
         socket.sendall(REQUEST_GET)
@@ -79,7 +80,7 @@ class HTTPClient(object):
     def POST(self, url, args=None):
         code = 500
         body = ""
-        return HTTPRequest(code, body)
+        return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
         print "URL: ", url
@@ -97,9 +98,8 @@ if __name__ == "__main__":
         help()
         sys.exit(1)
     elif (len(sys.argv) == 3):
-        print "1: ", sys.argv[1], "2: ", sys.argv[2]
-        print client.command(sys.argv[1], "GET", None)
-        #print client.command( sys.argv[1], sys.argv[2] )
+
+        print client.command( sys.argv[2], sys.argv[1] )
     else:
-        print "1: ", sys.argv[1]
-        print client.command( command, sys.argv[1] )    
+        print client.command( sys.argv[1] )   
+
