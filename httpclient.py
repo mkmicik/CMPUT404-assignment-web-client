@@ -25,7 +25,7 @@ import re
 import urllib
 
 REQUEST_GET = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n"
-REQUEST_PUT = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %s\r\nConnection: close\r\n\r\n"
+REQUEST_POST = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %s\r\nConnection: close\r\n\r\n"
 DEFAULT_PORT = 80
 
 def help():
@@ -48,11 +48,12 @@ class HTTPClient(object):
         parsed_response = data.split()
         return parsed_response[1]
 
-    def get_headers(self,data):
-        return data
-
     def get_body(self, data):
-        return data
+        #return data
+        if data != None:
+            return data.split('\r\n\r\n',2)[1]
+        else:
+            return None
 
     # read everything from the socket
     def recvall(self, sock):
@@ -66,41 +67,57 @@ class HTTPClient(object):
                 done = not part
         return str(buffer)
 
-    def getHost(self, url):
-        
-        print '***'
-        parsed = urllib.parse.urlparse('http://www.cwi.nl:80/%7Eguido/Python.html')
-        host = parsed.netloc
-        # debug
-        print host
-        print'***'
+    # could not figure out how to use urllib to parse the url so I'm gonna
+    # do it manually. Might be more error prone but f it
+    def splitURL(self, url):
+        host = ''
+        port = DEFAULT_PORT
+        path = ''
 
-    def getPath(self, url):
-        path = "path"
-        print url
-        # debug
-        print path
-    
-    def getPort(self, url):
-        port = "port"
-        print url
-        # debug
-        print port
+        split_url = url.split(':')
+
+        # url_split[0] will always be 'https', always ignored
+        if len(split_url) == 2:
+            # port is not specified
+            paths = split_url[1]
+
+            paths = paths.strip('/')
+            path_list = paths.split('/')
+            #for p in path_list:
+            #   print p
+
+            host = path_list.pop(0)
+            for dir in path_list:
+                path += '/'
+                path += dir
+        else:
+            # port is specified
+            host = split_url[1]
+            host = host.strip('/')
+            paths = split_url[2]
+            path_list = paths.split('/')
+            port = path_list[0]
+            path_list.pop(0)
+            for dir in path_list:
+                path += '/'
+                path += dir
+
+        # cannot give it nothing, / is the path if no path specified
+        if (path == ''): 
+            path += '/'
+
+        return host, port, path
+
 
     def GET(self, url, args=None):
         # from the url, we need to parse out the host, path, and port to use
-        host = self.getHost(url)
-        path = ''#self.getPath(url)
-        port = DEFAULT_PORT#self.getPort(url)
+        host, port, path = self.splitURL(url)
 
-        #request = "GET / HTTP/1.0\n\n"
-        socket = self.connect(host, DEFAULT_PORT)
-        socket.sendall(REQUEST_GET)
-
-        request = REQUEST_GET % (host, port)
+        request = REQUEST_GET % (path, host)
+        print '*** GET REQUEST ***'
         print request
 
-        client_connection = self.connect(host, port)
+        client_connection = self.connect(host, int(port))
         client_connection.sendall(request)
 
         response = self.recvall(client_connection)
@@ -108,12 +125,42 @@ class HTTPClient(object):
 
         code = self.get_code(response)
         body = self.get_body(response)
-        return HTTPResponse(code, body)
+
+        print code
+        print body
+        return HTTPResponse(int(code), body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
-        return HTTPResponse(code, body)
+        # from the url, we need to parse out the host, path, and port to use
+        host, port, path = self.splitURL(url)
+        
+        post_body = ""
+        arg_len = 0
+
+        if (args != None):
+            post_body = urllib.urlencode(args)
+            arg_len = len(post_body)
+        else:
+            post_body = ''
+        
+        request = REQUEST_POST % (path, host, arg_len)
+        request += post_body
+        print '*** POST REQUEST ***'
+        print request
+
+        client_connection = self.connect(host, int(port))
+        client_connection.sendall(request)
+
+        response = self.recvall(client_connection)
+        client_connection.close()
+
+        code = self.get_code(response)
+        body = self.get_body(response)
+
+        print code
+        print body
+
+        return HTTPResponse(int(code), body)
 
     def command(self, url, command="GET", args=None):
         print "URL: ", url
@@ -133,5 +180,5 @@ if __name__ == "__main__":
     elif (len(sys.argv) == 3):
         print client.command( sys.argv[2], sys.argv[1] )
     else:
-        print client.command( sys.argv[1] )   
+        print client.command( sys.argv[1] )  
 
