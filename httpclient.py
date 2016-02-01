@@ -24,8 +24,8 @@ import re
 # you may use urllib to encode data appropriately
 import urllib
 
-REQUEST_GET = "GET / HTTP/1.0\n\n"
-REQUEST_PUT = "PUT / HTTP/1.0\n\n"
+REQUEST_GET = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n"
+REQUEST_PUT = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %s\r\nConnection: close\r\n\r\n"
 DEFAULT_PORT = 80
 
 def help():
@@ -45,7 +45,8 @@ class HTTPClient(object):
         return clientSocket
 
     def get_code(self, data):
-        return data
+        parsed_response = data.split()
+        return parsed_response[1]
 
     def get_headers(self,data):
         return data
@@ -65,17 +66,49 @@ class HTTPClient(object):
                 done = not part
         return str(buffer)
 
-    def GET(self, url, args=None):
+    def getHost(self, url):
+        
+        print '***'
+        parsed = urllib.parse.urlparse('http://www.cwi.nl:80/%7Eguido/Python.html')
+        host = parsed.netloc
+        # debug
+        print host
+        print'***'
 
-        request = "GET / HTTP/1.0\n\n"
-        socket = self.connect(url, DEFAULT_PORT)
+    def getPath(self, url):
+        path = "path"
+        print url
+        # debug
+        print path
+    
+    def getPort(self, url):
+        port = "port"
+        print url
+        # debug
+        print port
+
+    def GET(self, url, args=None):
+        # from the url, we need to parse out the host, path, and port to use
+        host = self.getHost(url)
+        path = ''#self.getPath(url)
+        port = DEFAULT_PORT#self.getPort(url)
+
+        #request = "GET / HTTP/1.0\n\n"
+        socket = self.connect(host, DEFAULT_PORT)
         socket.sendall(REQUEST_GET)
 
-        response = self.recvall(socket)
+        request = REQUEST_GET % (host, port)
+        print request
 
-        code = 200
+        client_connection = self.connect(host, port)
+        client_connection.sendall(request)
+
+        response = self.recvall(client_connection)
+        client_connection.close()
+
+        code = self.get_code(response)
         body = self.get_body(response)
-        return HTTPRequest(code, body)
+        return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
         code = 500
@@ -90,7 +123,7 @@ class HTTPClient(object):
         else:
             return self.GET( url, args )
     
-# fuck this bullshit hipster loosely typed sad excuse for a language
+# Entry point supplied by Dr. Hindle
 if __name__ == "__main__":
     client = HTTPClient()
     command = "GET"
@@ -98,7 +131,6 @@ if __name__ == "__main__":
         help()
         sys.exit(1)
     elif (len(sys.argv) == 3):
-
         print client.command( sys.argv[2], sys.argv[1] )
     else:
         print client.command( sys.argv[1] )   
