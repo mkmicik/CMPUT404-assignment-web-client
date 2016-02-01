@@ -37,17 +37,19 @@ class HTTPResponse(object):
         self.body = body
 
 class HTTPClient(object):
-    #def get_host_port(self,url):
 
+    # return a connection to the host on the specified port
     def connect(self, host, port):
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         clientSocket.connect((host, port))
         return clientSocket
 
+    # return the status code from the response
     def get_code(self, data):
         parsed_response = data.split()
         return parsed_response[1]
 
+    # return the body from the response
     def get_body(self, data):
         #return data
         if data != None:
@@ -68,7 +70,7 @@ class HTTPClient(object):
         return str(buffer)
 
     # could not figure out how to use urllib to parse the url so I'm gonna
-    # do it manually. Might be more error prone but f it
+    # do it manually. Might be more error prone but f*** it
     def splitURL(self, url):
         host = ''
         port = DEFAULT_PORT
@@ -79,26 +81,27 @@ class HTTPClient(object):
         # url_split[0] will always be 'https', always ignored
         if len(split_url) == 2:
             # port is not specified
+            # only one colin in the path, no port specified
             paths = split_url[1]
+            paths = paths.strip('/')        # remove trailing and leading slashes
+            path_list = paths.split('/')    # list in format host, path_dir, path_dir ... path_dir
 
-            paths = paths.strip('/')
-            path_list = paths.split('/')
-            #for p in path_list:
-            #   print p
-
-            host = path_list.pop(0)
+            host = path_list.pop(0)         # host is the first in the list
+            # rebuild the path structure
             for dir in path_list:
                 path += '/'
                 path += dir
         else:
             # port is specified
+            # 2 colins in the path, port must be specified
             host = split_url[1]
-            host = host.strip('/')
-            paths = split_url[2]
+            host = host.strip('/')          # remove trailing and leading slashes
+            paths = split_url[2]            # list in format port_num, path_dir, path_dir ... path_dir
             path_list = paths.split('/')
-            port = path_list[0]
-            path_list.pop(0)
-            for dir in path_list:
+            port = path_list[0]             
+            path_list.pop(0)                # get the port
+            # rebuild the path structure
+            for dir in path_list:       
                 path += '/'
                 path += dir
 
@@ -114,8 +117,8 @@ class HTTPClient(object):
         host, port, path = self.splitURL(url)
 
         request = REQUEST_GET % (path, host)
-        print '*** GET REQUEST ***'
-        print request
+
+        #print request
 
         client_connection = self.connect(host, int(port))
         client_connection.sendall(request)
@@ -126,8 +129,8 @@ class HTTPClient(object):
         code = self.get_code(response)
         body = self.get_body(response)
 
-        print code
-        print body
+        #print code
+        #print body
         return HTTPResponse(int(code), body)
 
     def POST(self, url, args=None):
@@ -137,6 +140,7 @@ class HTTPClient(object):
         post_body = ""
         arg_len = 0
 
+        # handle args
         if (args != None):
             post_body = urllib.urlencode(args)
             arg_len = len(post_body)
@@ -145,8 +149,8 @@ class HTTPClient(object):
         
         request = REQUEST_POST % (path, host, arg_len)
         request += post_body
-        print '*** POST REQUEST ***'
-        print request
+
+        #print request
 
         client_connection = self.connect(host, int(port))
         client_connection.sendall(request)
@@ -157,8 +161,8 @@ class HTTPClient(object):
         code = self.get_code(response)
         body = self.get_body(response)
 
-        print code
-        print body
+        #print code
+        #print body
 
         return HTTPResponse(int(code), body)
 
